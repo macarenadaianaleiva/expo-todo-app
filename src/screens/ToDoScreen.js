@@ -142,7 +142,7 @@ export default function ToDoScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>ToDo Minimal</Text>
+      <Text style={styles.title}>Mis tareas para hoy</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -200,12 +200,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingTop: 60,
     paddingHorizontal: 20,
+    borderWidth: 2,             // Grosor del borde
+    borderColor: '#007AFF',     // Color del borde
+    borderRadius: 15,           // Radio de las esquinas redondeadas
+    padding: 16,                // Espaciado interno
+    backgroundColor: '#fff',    // Color de fondo del contenedor
+    margin: 20,                 // Espaciado externo
+    shadowColor: '#000',        // (Opcional) Sombra para iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,     
   },
   title: {
     fontSize: 28,
     fontWeight: "600",
     marginBottom: 20,
     textAlign: "center",
+    fontFamily: "cursive",
   },
   inputContainer: {
     flexDirection: "row",

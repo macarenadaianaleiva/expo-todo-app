@@ -24,7 +24,7 @@ export default function SplashScreen({ onFinish }) {
 
   return (
     <Animated.View style={[styles.container, { opacity }]}>
-      <Text style={styles.title}>ToDo Minimal</Text>
+      <Text style={styles.title}>Todo Minimal</Text>
     </Animated.View>
   );
 }
