@@ -11,9 +11,16 @@ import {
   LayoutAnimation,
   UIManager,
   Platform,
+  StatusBar,
+  SafeAreaView,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, gradients } from '../theme/colors';
+import { commonStyles } from '../theme/styles';
+import StatsCard from '../components/StatsCard';
+import AnimatedTodoItem from '../components/AnimatedTodoItem';
 
 const STORAGE_KEY = "@todos";
 
@@ -29,7 +36,9 @@ export default function ToDoScreen() {
   const [todos, setTodos] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
+  const [newTaskId, setNewTaskId] = useState(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
 
   useEffect(() => {
     const loadTodos = async () => {
@@ -66,7 +75,11 @@ export default function ToDoScreen() {
     };
 
     setTodos([newTodo, ...todos]);
+    setNewTaskId(newTodo.id);
     setTask("");
+    
+    // Reset newTaskId after animation
+    setTimeout(() => setNewTaskId(null), 500);
   };
 
   const toggleComplete = (id) => {
@@ -82,11 +95,18 @@ export default function ToDoScreen() {
     setTaskToDelete(id);
     setModalVisible(true);
 
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
   const deleteTask = () => {
@@ -95,110 +115,152 @@ export default function ToDoScreen() {
       setTodos((prev) => prev.filter((todo) => todo.id !== taskToDelete));
       setTaskToDelete(null);
     }
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => setModalVisible(false));
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 50,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setModalVisible(false));
   };
 
   const cancelDelete = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 50,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       setModalVisible(false);
       setTaskToDelete(null);
     });
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.todoItem}>
-      <TouchableOpacity
-        onPress={() => toggleComplete(item.id)}
-        style={{ flexDirection: "row", alignItems: "center" }}
-      >
-        {item.completed ? (
-          <Icon name="check-circle" size={24} color="#0a84ff" />
-        ) : (
-          <Icon name="radio-button-unchecked" size={24} color="#ccc" />
-        )}
-        <Text
-          style={[
-            styles.todoText,
-            item.completed && styles.completedText,
-            { marginLeft: 8 },
-          ]}
-        >
-          {item.text}
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => confirmDeleteTask(item.id)}>
-        <Icon name="delete" size={24} color="red" />
-      </TouchableOpacity>
+  const renderItem = ({ item, index }) => (
+    <AnimatedTodoItem
+      item={item}
+      onToggle={toggleComplete}
+      onDelete={confirmDeleteTask}
+      isNew={item.id === newTaskId}
+    />
+  );
+
+  const EmptyComponent = () => (
+    <View style={styles.emptyContainer}>
+      <Icon name="assignment" size={80} color={colors.textLight} />
+      <Text style={styles.emptyTitle}>No hay tareas</Text>
+      <Text style={styles.emptySubtitle}>¡Agrega tu primera tarea para comenzar!</Text>
     </View>
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Mis tareas para hoy</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Agregar tarea..."
-          value={task}
-          onChangeText={setTask}
-          onSubmitEditing={handleAddTask}
-        />
-        <TouchableOpacity onPress={handleAddTask} style={styles.addButton}>
-          <Icon name="add" size={28} color="#fff" />
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        data={todos}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        ListEmptyComponent={<Text style={styles.empty}>No hay tareas</Text>}
-      />
-
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="none"
-        onRequestClose={cancelDelete}
-      >
-        <View style={styles.modalOverlay}>
-          <Animated.View style={[styles.modalContent, { opacity: fadeAnim }]}>
-            <Text style={styles.modalText}>
-              ¿Estás seguro que quieres borrar esta tarea?
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={cancelDelete}
-              >
-                <Text style={styles.modalButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.deleteButton]}
-                onPress={deleteTask}
-              >
-                <Text style={styles.modalButtonText}>Borrar</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+    <LinearGradient
+      colors={gradients.background}
+      style={styles.container}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Mis Tareas</Text>
+          <Text style={styles.subtitle}>Organiza tu día</Text>
         </View>
-      </Modal>
-    </View>
+
+        {todos.length > 0 && <StatsCard todos={todos} />}
+
+        <View style={styles.inputContainer}>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="¿Qué necesitas hacer?"
+              placeholderTextColor="#999"
+              value={task}
+              onChangeText={setTask}
+              onSubmitEditing={handleAddTask}
+            />
+            <TouchableOpacity onPress={handleAddTask} style={styles.addButton}>
+              <LinearGradient
+                colors={gradients.primary}
+                style={styles.addButtonGradient}
+              >
+                <Icon name="add" size={24} color="#fff" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.listContainer}>
+          <FlatList
+            data={todos}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id.toString()}
+            ListEmptyComponent={EmptyComponent}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+          />
+        </View>
+
+        <Modal
+          visible={modalVisible}
+          transparent
+          animationType="none"
+          onRequestClose={cancelDelete}
+        >
+          <View style={styles.modalOverlay}>
+            <Animated.View 
+              style={[
+                styles.modalContent, 
+                { 
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }]
+                }
+              ]}
+            >
+              <View style={styles.modalIcon}>
+                <Icon name="warning" size={40} color={colors.error} />
+              </View>
+              <Text style={styles.modalTitle}>Eliminar tarea</Text>
+              <Text style={styles.modalText}>
+                ¿Estás seguro que quieres eliminar esta tarea? Esta acción no se puede deshacer.
+              </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={cancelDelete}
+                >
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButtonModal}
+                  onPress={deleteTask}
+                >
+                  <Text style={styles.deleteButtonText}>Eliminar</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    paddingTop: 60,
+  },
+  safeArea: {
+    flex: 1,
     paddingHorizontal: 20,
     borderWidth: 2,             // Grosor del borde
     borderColor: '#007AFF',     // Color del borde
@@ -212,88 +274,86 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,     
   },
+  header: {
+    ...commonStyles.header,
+    paddingTop: 40,
+  },
   title: {
-    fontSize: 28,
-    fontWeight: "600",
-    marginBottom: 20,
-    textAlign: "center",
-    fontFamily: "cursive",
+
+    ...commonStyles.title,
+  },
+  subtitle: {
+    ...commonStyles.subtitle,
+
   },
   inputContainer: {
-    flexDirection: "row",
-    marginBottom: 20,
+    ...commonStyles.inputContainer,
+  },
+  inputWrapper: {
+    ...commonStyles.inputWrapper,
   },
   input: {
-    flex: 1,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 40,
+    ...commonStyles.input,
   },
   addButton: {
-    marginLeft: 10,
-    backgroundColor: "#0a84ff",
-    borderRadius: 8,
+    paddingVertical: 12,
     paddingHorizontal: 15,
-    justifyContent: "center",
+    borderRadius: 12,
     alignItems: "center",
+    justifyContent: "center",
   },
-  todoItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    borderBottomColor: "#eee",
-    borderBottomWidth: 1,
+  addButtonGradient: {
+    flex: 1,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  todoText: {
-    fontSize: 16,
+  listContainer: {
+    flex: 1,
   },
-  completedText: {
-    textDecorationLine: "line-through",
-    color: "#999",
+  listContent: {
+    paddingBottom: 20,
   },
-  empty: {
-    textAlign: "center",
-    marginTop: 40,
-    color: "#aaa",
+
+  emptyContainer: {
+    ...commonStyles.emptyContainer,
+  },
+  emptyTitle: {
+    ...commonStyles.emptyTitle,
+  },
+  emptySubtitle: {
+    ...commonStyles.emptySubtitle,
   },
   modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
+    ...commonStyles.modalOverlay,
   },
   modalContent: {
-    backgroundColor: "white",
-    padding: 20,
-    borderRadius: 10,
-    width: "80%",
-    alignItems: "center",
+    ...commonStyles.modalContent,
+  },
+  modalIcon: {
+    marginBottom: 15,
+  },
+  modalTitle: {
+    ...commonStyles.modalTitle,
   },
   modalText: {
-    fontSize: 18,
-    marginBottom: 20,
-    textAlign: "center",
+    ...commonStyles.modalText,
   },
   modalButtons: {
-    flexDirection: "row",
-    width: "100%",
-    justifyContent: "space-around",
-  },
-  modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    ...commonStyles.modalButtons,
   },
   cancelButton: {
-    backgroundColor: "#ccc",
+    ...commonStyles.button,
+    backgroundColor: colors.textLight,
   },
-  deleteButton: {
-    backgroundColor: "red",
+  deleteButtonModal: {
+    ...commonStyles.button,
+    backgroundColor: colors.error,
   },
-  modalButtonText: {
-    color: "white",
-    fontWeight: "bold",
+  cancelButtonText: {
+    ...commonStyles.buttonText,
+  },
+  deleteButtonText: {
+    ...commonStyles.buttonText,
   },
 });
