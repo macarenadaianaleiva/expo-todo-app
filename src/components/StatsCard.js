@@ -102,10 +102,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: 'rgba(255, 255, 255, 0.8)',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontWeight: 'bold',
   },
   statDivider: {
     width: 1,
